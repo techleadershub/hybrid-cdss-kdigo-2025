@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Patient History - KDIGO CDSS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #f0fdfa; padding: 20px; color: #333; }
+    .container { max-width: 1000px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    h1 { color: #0f766e; border-bottom: 2px solid #ccfbf1; padding-bottom: 15px; }
+    .nav { margin-bottom: 20px; }
+    .nav a { text-decoration: none; color: white; background: #0d9488; padding: 10px 15px; border-radius: 6px; font-weight: 600; }
+    .nav a:hover { background: #115e59; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.95rem; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: top; }
+    th { background: #f0fdfa; color: #134e4a; font-weight: 700; }
+    tr:hover { background: #f9fafb; }
+    
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+    .badge-hb { background: #fee2e2; color: #991b1b; }
+    .badge-dose { background: #dbf4ff; color: #075985; }
+
+    .rationale-cell { font-size: 0.9rem; color: #4b5563; max-width: 400px; }
+    .rationale-content { max-height: 100px; overflow-y: auto; }
+    
+    .loading { text-align: center; padding: 40px; color: #666; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="nav">
+    <a href="/">← Back to Calculator</a>
+  </div>
+
+  <h1>📋 Patient History Log</h1>
+  <p>Showing last 50 records saved via "Generate Rationale".</p>
+
+  <div id="table-container">
+    <div class="loading">Loading history...</div>
+  </div>
+</div>
+
+<script>
+  async function loadHistory() {
+    try {
+      const res = await fetch('/api/history');
+      const json = await res.json();
+      
+      if (!json.data || json.data.length === 0) {
+        document.getElementById('table-container').innerHTML = "<p>No records found yet.</p>";
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Patient</th>
+              <th>Hb (g/dL)</th>
+              <th>Recommended Dose</th>
+              <th>AI Rationale</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      json.data.forEach(row => {
+        // Format date
+        const date = new Date(row.timestamp).toLocaleString();
+        
+        // Render markdown for rationale
+        const rationaleHtml = marked.parse(row.ai_explanation || "No explanation saved.");
+
+        html += `
+          <tr>
+            <td style="white-space:nowrap; color:#666;">${date}</td>
+            <td>
+              <strong>${row.patient_name || "Anonymous"}</strong><br>
+              <small>${row.sex}/${row.age} yrs</small>
+            </td>
+            <td><span class="badge badge-hb">${row.hemoglobin}</span></td>
+            <td>
+              <div class="badge badge-dose">${row.recommended_dose}</div>
+              <small style="display:block;margin-top:4px;">${row.esa_agent}</small>
+            </td>
+            <td class="rationale-cell">
+              <div class="rationale-content">${rationaleHtml}</div>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += "</tbody></table>";
+      document.getElementById('table-container').innerHTML = html;
+
+    } catch (e) {
+      console.error(e);
+      document.getElementById('table-container').innerHTML = "<p style='color:red'>Error loading history.</p>";
+    }
+  }
+
+  loadHistory();
+</script>
+
+</body>
+</html>

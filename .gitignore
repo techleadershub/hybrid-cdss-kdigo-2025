@@ -1,2 +1,8 @@
 node_modules
 .env
+*.db
+kdigo_history.db
+PRESENTATION_SLIDES.md
+PROJECT_REPORT.md
+STUDENT_VIVA_PREP.md
+KDIGO-2025-Anemia-in-CKD-Guideline_Public-Review-Draft_Nov42024.pdf

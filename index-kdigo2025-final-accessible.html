@@ -93,6 +93,9 @@ input[readonly]{background:#e9ecef}
 <p> <strong></strong> <strong></strong> </p>
 <div class=><strong></strong> </div>
 </header>
+<div style="text-align:right; margin-top:-10px; margin-bottom:20px;">
+  <a href="/history" style="text-decoration:none; background:#0d9488; color:white; padding:8px 12px; border-radius:6px; font-weight:600;">📜 View Patient History</a>
+</div>
 
 <!-- All previous sections remain exactly the same -->
 <section class="section">
@@ -844,6 +847,11 @@ async function generateRationale() {
     const epoRec = calculateKDIGO_ESA_CKD_G5D(hemoglobin, prevHb, weight, currentDose, weeksSinceChange, esaAgent);
 
     // 3. Prepare Payload
+    // Include extra metadata for History DB
+    const patientName = document.getElementById('patientName').value.trim();
+    const age = document.getElementById('age').value;
+    const sex = document.getElementById('sex').value;
+
     const payload = {
         inputs: {
             hemoglobin, 
@@ -858,6 +866,11 @@ async function generateRationale() {
             perDose: epoRec.perDose || 0,
             unit: epoRec.unit || "",
             note: epoRec.note || ""
+        },
+        extra: {
+           patientName,
+           age,
+           sex
         }
     };
 

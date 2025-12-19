@@ -11,9 +11,43 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// --- Database Setup (SQLite) ---
+const sqlite3 = require('sqlite3').verbose();
+// Use a file-based DB. In Railway, this resets on deploy unless a Volume is mounted, 
+// but it persists across restarts if not redeployed. Good for school project/demos.
+const db = new sqlite3.Database('./kdigo_history.db', (err) => {
+  if (err) console.error('Could not connect to database', err);
+  else console.log('Connected to SQLite database');
+});
+
+// Create History Table
+db.serialize(() => {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      patient_name TEXT,
+      age INTEGER,
+      sex TEXT,
+      hemoglobin REAL,
+      weight REAL,
+      esa_agent TEXT,
+      current_dose REAL,
+      recommended_dose TEXT,
+      note TEXT,
+      ai_explanation TEXT
+    )
+  `);
+});
+
 // Serve static files
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index-kdigo2025-final-accessible.html'));
+});
+
+// Serve History Page
+app.get('/history', (req, res) => {
+  res.sendFile(path.join(__dirname, 'history.html'));
 });
 
 const openai = new OpenAI({
@@ -86,6 +120,34 @@ Final disclaimer line:
     // Simple safeguard to ensure we return explanation text only without markdown code blocks if AI adds them
     explanation = explanation.replace(/```/g, ""); 
 
+    // Save to History DB automatically when Rationale is generated
+    // (Or we could have a separate save button, but this is convenient)
+    const stmt = db.prepare(`
+      INSERT INTO history (patient_name, age, sex, hemoglobin, weight, esa_agent, current_dose, recommended_dose, note, ai_explanation)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    // We need to extract some extra fields from the input if we want to save them. 
+    // The current RequestSchema doesn't strictly require patientName/Age/Sex, 
+    // so we might need to update the schema or accept them optionally.
+    // For now, let's pull them if they exist in req.body.extra (we'll update frontend to send them).
+    
+    const extra = req.body.extra || {}; // Expect frontend to send { patientName, age, sex }
+
+    stmt.run(
+      extra.patientName || "Anonymous",
+      extra.age || null,
+      extra.sex || "N/A",
+      inputs.hemoglobin,
+      inputs.weight,
+      inputs.esaAgent,
+      inputs.currentDose || 0,
+      `${ruleOutput.weeklyDose || ruleOutput.perDose} ${ruleOutput.unit}`,
+      ruleOutput.note,
+      explanation
+    );
+    stmt.finalize();
+
     res.json({ explanation });
 
   } catch (error) {
@@ -95,6 +157,17 @@ Final disclaimer line:
     console.error("AI Error:", error);
     res.status(500).json({ error: "Failed to generate rationale" });
   }
+});
+
+// --- History API ---
+app.get('/api/history', (req, res) => {
+  db.all("SELECT * FROM history ORDER BY timestamp DESC LIMIT 50", [], (err, rows) => {
+    if (err) {
+      res.status(500).json({error: err.message});
+      return;
+    }
+    res.json({ data: rows });
+  });
 });
 
 const PORT = process.env.PORT || 3000;
