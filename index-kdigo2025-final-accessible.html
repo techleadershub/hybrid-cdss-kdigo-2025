@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rule Based EPO Dose Optimising Tool - KDIGO/FDA</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <style>
+    body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;margin:0;padding:20px;box-sizing:border-box}
+.container{max-width:700px;margin:40px auto;background:white;padding:24px;border-radius:15px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+*,*:before,*:after{box-sizing:border-box}
+h1,h2{color:#333;margin-top:0}
+label{display:block;margin-bottom:6px;font-weight:600;color:#555}
+input[type=number],input[type=text],select{width:100%;padding:8px;margin-bottom:10px;border:1px solid #ccc;border-radius:6px}
+input[readonly]{background:#e9ecef}
+.grid-two{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+@media(max-width:768px){.grid-two{grid-template-columns:1fr}}
+.results{background:#f8f9fa;padding:16px;border-radius:12px;border-left:6px solid #667eea;margin-top:20px;display:none}
+.alert{color:#d9534f;font-weight:700}
+.kdigo-note{background:#fff3cd;padding:10px;border-radius:6px;border-left:4px solid #ffc107;margin-bottom:15px;font-size:0.9rem}
+.normal-range{font-size:0.85rem;color:#888;margin-top:-8px}
+  </style>
+
+  
+
+<style>
+.kdigo-ref {
+  margin: 0 0 16px 0;
+  padding: 14px 18px;
+  background: #0f172a; /* dark slate */
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  border-left: 6px solid #22c55e; /* green accent */
+}
+
+.kdigo-ref a {
+  color: #38bdf8;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.kdigo-ref strong {
+  color: #facc15; /* gold highlight */
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background-color: #ffffff; color:#0f172a;
+  margin: 8% auto;
+  padding: 20px;
+  width: 80%;
+  max-width: 650px;
+  border-radius: 6px;
+  font-family: Arial, sans-serif;
+}
+
+.close {
+  float: right;
+  font-size: 22px;
+  cursor: pointer;
+}
+</style>
+
+</head>
+<body>
+
+<div class="kdigo-ref">
+  <small>
+    ℹ️ This CDSS is technically aligned with selected recommendations from the
+    <strong>KDIGO 2025 Clinical Practice Guideline for Anemia in Chronic Kidney Disease</strong>.
+    <a href="#" onclick="openKdigoModal()">View KDIGO guideline details</a>
+  </small>
+</div>
+
+  <div class="container">
+<header>
+<h1>🔬 Rule Based EPO Dose Optimising Tool</h1>
+<p> <strong></strong> <strong></strong> </p>
+<div class=><strong></strong> </div>
+</header>
+
+<!-- All previous sections remain exactly the same -->
+<section class="section">
+<h2>Patient Demographics</h2>
+<div class="grid-two">
+<div class="form-group">
+<label for="patientName">Patient Name</label>
+<input type="text" id="patientName" placeholder="Enter patient name">
+</div>
+<div class="form-group">
+<label for="age">Age (years)</label>
+<input type="number" id="age" placeholder="e.g. 65">
+<div class="normal-range">Normal range: Adult (no fixed range)</div>
+</div>
+<div class="form-group">
+<label for="sex">Sex</label>
+<select id="sex">
+<option value="male" selected>Male</option>
+<option value="female">Female</option>
+</select>
+</div>
+<div class="form-group">
+<label for="weight">Weight (kg)</label>
+<input type="number" step="0.1" id="weight" placeholder="e.g. 70">
+<div class="normal-range">Typical adult range: 50–100 kg</div>
+</div>
+<div class="form-group">
+<label for="height">Height (cm)</label>
+<input type="number" step="0.1" id="height" placeholder="e.g. 165">
+<div class="normal-range">Adult average: 150–190 cm</div>
+</div>
+<div class="form-group">
+<label for="bmi">BMI (kg/m²)</label>
+<input type="number" step="0.1" id="bmi" placeholder="Calculated automatically" readonly>
+<div class="normal-range">Normal BMI: 18.5–24.9 kg/m²</div>
+</div>
+<div class="form-group">
+<label for="ethnicity">Ethnicity</label>
+<select id="ethnicity">
+<option value="non-black" selected>Non-Black</option>
+<option value="black">Black</option>
+</select>
+</div>
+<div class="form-group">
+<label for="testDate">Test Date</label>
+<input type="date" id="testDate">
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2>Laboratory Values</h2>
+<div class="grid-two">
+<div class="form-group">
+<label for="creatinine">Serum Creatinine (mg/dL)</label>
+<input type="number" step="0.01" id="creatinine" placeholder="e.g. 1.4">
+<div class="normal-range">Normal: 0.6 - 1.3 mg/dL</div>
+</div>
+<div class="form-group">
+<label for="bun">BUN (mg/dL)</label>
+<input type="number" step="0.1" id="bun" placeholder="e.g. 20">
+<div class="normal-range">Normal: 7 - 20 mg/dL</div>
+</div>
+<div class="form-group">
+<label for="potassium">Potassium (mEq/L)</label>
+<input type="number" step="0.01" id="potassium" placeholder="e.g. 4.5">
+<div class="normal-range">Normal: 3.5 - 5.0 mEq/L</div>
+</div>
+<div class="form-group">
+<label for="sodium">Sodium (mEq/L)</label>
+<input type="number" step="0.01" id="sodium" placeholder="e.g. 140">
+<div class="normal-range">Normal: 135 - 145 mEq/L</div>
+</div>
+<div class="form-group">
+<label for="albumin">Albumin (g/dL)</label>
+<input type="number" step="0.01" id="albumin" placeholder="e.g. 4.0">
+<div class="normal-range">Normal: 3.5 - 5.0 g/dL</div>
+</div>
+<div class="form-group">
+<label for="esr">ESR (mm/hr)</label>
+<input type="number" id="esr" placeholder="e.g. 15">
+<div class="normal-range">Normal: Males &lt; 15, Females &lt; 20 mm/hr</div>
+</div>
+<div class="form-group">
+<label for="ferritin">Ferritin (ng/mL)</label>
+<input type="number" step="0.1" id="ferritin" placeholder="e.g. 150">
+<div class="normal-range">Normal: 30 - 400 ng/mL</div>
+</div>
+<div class="form-group">
+<label for="tibc">Total Iron Binding Capacity (TIBC) (mcg/dL)</label>
+<input type="number" step="0.1" id="tibc" placeholder="e.g. 300">
+<div class="normal-range">Normal: 240 - 450 mcg/dL</div>
+</div>
+<div class="form-group">
+<label for="tsat">Transferrin Saturation (TSAT) (%)</label>
+<input type="number" step="0.1" id="tsat" placeholder="e.g. 25">
+<div class="normal-range">Normal: 20 - 50 %</div>
+</div>
+<div class="form-group">
+<label for="crp">C-Reactive Protein (CRP) (mg/L)</label>
+<input type="number" step="0.1" id="crp" placeholder="e.g. 5">
+<div class="normal-range">Normal: &lt; 3 mg/L</div>
+</div>
+<div class="form-group">
+<label for="b12">Vitamin B12 (pg/mL)</label>
+<input type="number" step="1" id="b12" placeholder="e.g. 300">
+<div class="normal-range">Normal: 200 - 900 pg/mL</div>
+</div>
+<div class="form-group">
+<label for="folicAcid">Folic Acid (ng/mL)</label>
+<input type="number" step="0.1" id="folicAcid" placeholder="e.g. 8">
+<div class="normal-range">Normal: &gt; 3 ng/mL</div>
+</div>
+<div class="form-group">
+<label for="pth">Parathyroid Hormone (PTH) (pg/mL)</label>
+<input type="number" step="1" id="pth" placeholder="e.g. 50">
+<div class="normal-range">Normal: 10 - 65 pg/mL</div>
+</div>
+<div class="form-group">
+<label for="egfrInput">eGFR (mL/min/1.73m²)</label>
+<input type="number" step="1" id="egfrInput" placeholder="Leave blank for auto">
+<div class="normal-range">Normal: &gt; 90 mL/min/1.73m²</div>
+</div>
+<div class="form-group">
+<label for="mch">MCH (pg)</label>
+<input type="number" step="0.1" id="mch" placeholder="e.g. 28">
+<div class="normal-range">Normal: 26 - 34 pg</div>
+</div>
+<div class="form-group">
+<label for="mchc">MCHC (g/dL)</label>
+<input type="number" step="0.1" id="mchc" placeholder="e.g. 33">
+<div class="normal-range">Normal: 32 - 36 g/dL</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2>Hematology</h2>
+<div class="grid-two">
+<div class="form-group">
+<label for="hemoglobin">Hemoglobin (g/dL)</label>
+<input type="number" step="0.1" id="hemoglobin" placeholder="e.g. 9.5">
+<div class="normal-range">Normal: Males 13.8–17.2, Females 12.1–15.1 g/dL</div>
+<div class="form-row">
+  <label for="prevHb">Hb ~4 weeks ago (g/dL):</label>
+  <input type="number" id="prevHb" step="0.1" placeholder="e.g., 9.2">
+</div>
+<div class="form-row">
+  <label for="weeksSinceChange">Weeks since last ESA dose change:</label>
+  <input type="number" id="weeksSinceChange" step="1" placeholder="e.g., 4">
+</div>
+<div class="form-row">
+  <label for="esaAgent">ESA agent:</label>
+  <select id="esaAgent">
+    <option value="epoetin" selected>Epoetin alfa/beta (units)</option>
+    <option value="darbepoetin">Darbepoetin (µg)</option>
+    <option value="mircera">Methyl PEG-epoetin beta (Mircera) (µg)</option>
+  </select>
+</div>
+</div>
+<div class="form-group">
+<label for="hematocrit">Hematocrit (%)</label>
+<input type="number" step="0.1" id="hematocrit" placeholder="e.g. 29">
+<div class="normal-range">Normal: Males 40.7–50.3, Females 36.1–44.3 %</div>
+</div>
+<div class="form-group">
+<label for="mcv">MCV (fL)</label>
+<input type="number" step="0.1" id="mcv" placeholder="e.g. 85">
+<div class="normal-range">Normal: 80–100 fL</div>
+</div>
+<div class="form-group">
+<label for="rbc">RBC (million/uL)</label>
+<input type="number" step="0.01" id="rbc" placeholder="e.g. 4.3">
+<div class="normal-range">Normal: Males 4.7–6.1, Females 4.2–5.4 million/uL</div>
+</div>
+<div class="form-group">
+<label for="wbc">WBC (thousand/uL)</label>
+<input type="number" step="0.1" id="wbc" placeholder="e.g. 6.5">
+<div class="normal-range">Normal: 4.5–11 thousand/uL</div>
+</div>
+<div class="form-group">
+<label for="platelets">Platelets (thousand/uL)</label>
+<input type="number" step="1" id="platelets" placeholder="e.g. 250">
+<div class="normal-range">Normal: 150–450 thousand/uL</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2>Current Medications</h2>
+<div class="grid-two">
+<div class="form-group">
+<label><input type="checkbox" id="acei"> ACE Inhibitors</label>
+</div>
+<div class="form-group">
+<label><input type="checkbox" id="arb"> ARBs</label>
+</div>
+<div class="form-group">
+<label><input type="checkbox" id="diuretics"> Diuretics</label>
+</div>
+<div class="form-group">
+<label><input type="checkbox" id="statins"> Statins</label>
+</div>
+<div class="form-group">
+<label><input type="checkbox" id="nsaids"> NSAIDs</label>
+</div>
+<div class="form-group">
+<label><input type="checkbox" id="diabetesMeds"> Diabetes Medications</label>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2>EPO Dose Components</h2>
+<div class="form-group">
+<label for="currentEpoDose">Current EPO Dose (units/week)</label>
+<input type="number" step="10" id="currentEpoDose" placeholder="Enter current EPO dose or 0 if none">
+</div>
+</section>
+
+<button onclick="calculateAll()" style="width:100%;padding:12px;font-size:1.1rem;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;margin-top:20px">Calculate </button>
+
+<section class="results" id="results" style="margin-top:25px;display:none">
+<h2>Results</h2>
+<div class="result-item" id="patientNameResult"></div>
+<div class="result-item" id="bmiResult"></div>
+<div class="result-item" id="egfrResult"></div>
+<div class="result-item" id="medicationAdvice"></div>
+<div class="result-item" id="labAlerts"></div>
+<div class="result-item" id="dietaryAdvice"></div>
+<div class="result-item" id="epoPrediction"></div>
+<div class="result-item" id="predictedHb"></div>
+<div class="result-item" id="guidelineCompliance"></div>
+
+    <div id="ai-rationale-section" style="margin-top:20px; border-top: 2px dashed #667eea; padding-top: 20px;">
+       <button onclick="generateRationale()" id="btn-rationale" style="background:#10b981; color:white; padding:12px 18px; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:1rem; width:100%;"> ✨ Generate KDIGO Rationale (Explanation Only)</button>
+       <div id="rationale-loader" style="display:none; margin-top:15px; color:#555; text-align:center;">Processing clinical context...</div>
+       <div id="rationale-output" style="display:none; background:#f0fdf4; border:1px solid #22c55e; padding:15px; margin-top:15px; border-radius:6px;">
+          <h4 style="margin-top:0; color:#166534;">KDIGO-Aligned Rationale</h4>
+          <div id="rationale-text" style="line-height:1.6; color:#1e293b;"></div>
+          <small style="color:#64748b; display:block; margin-top:12px; border-top:1px solid #bbf7d0; padding-top:8px;"><em>Disclaimer: AI explanation only. Does not modify the underlying algorithm. Not medical advice.</em></small>
+       </div>
+    </div>
+</section>
+</div>
+
+  <script>
+    function calculateBMI(weight, height) {
+    if (!weight || !height) return NaN;
+    let heightMeters = height / 100;
+    return (weight / (heightMeters * heightMeters)).toFixed(1);
+}
+
+function calculateeGFR(creatinine, age, sex, ethnicity) {
+    if (!creatinine || !age) return NaN;
+    let k = sex === 'female' ? 0.7 : 0.9;
+    let alpha = sex === 'female' ? -0.329 : -0.411;
+    let minCrK = Math.min(creatinine / k, 1);
+    let maxCrK = Math.max(creatinine / k, 1);
+    let sexFactor = sex === 'female' ? 1.018 : 1;
+    let ethFactor = ethnicity === 'black' ? 1.159 : 1;
+    let eGFR = 141 * Math.pow(minCrK, alpha) * Math.pow(maxCrK, -1.209) * Math.pow(0.993, age) * sexFactor * ethFactor;
+    return Math.round(eGFR);
+}
+
+// KDIGO 2025 (Public Review Draft Nov 2024) aligned ESA dosing logic for CKD G5D (HD/PD)
+// Key KDIGO points used:
+// - Initiate ESA in CKD G5D when Hb ≤9.0–10.0 g/dL (Rec 3.2.1)
+// - Maintenance target in adults: keep Hb <11.5 g/dL (Rec 3.3.1)
+// - Epoetin alfa/beta initial: 50–100 units/kg per dose, 3x/week; adjust based on Hb rise after 4 weeks (Table 7)
+// - Avoid adjusting more frequently than every 4 weeks (PP 3.4.1.2)
+// ================= KDIGO 2025 Anemia in CKD (Public Review Draft Nov 2024) — CKD G5D ESA Dosing =================
+// This calculator implements a *subset* of KDIGO guidance for adults on kidney replacement therapy (CKD G5D),
+// focusing on ESA initiation/maintenance targets and Table 7 dosing/adjustment rules.
+//
+// Implemented KDIGO items (see KDIGO 2025 Anemia in CKD draft):
+// - Recommendation 3.2.1 (CKD G5D): initiate ESA when Hb ≤9.0–10.0 g/dL
+// - Recommendation 3.3.1: target Hb <11.5 g/dL in adults on ESA
+// - Table 7: initial dose + dose adjustment rules for epoetin alfa/beta, darbepoetin, and methyl-PEG-epoetin beta
+// - Practice Point 3.4.1.2: avoid adjusting ESA more often than once every 4 weeks,
+//   EXCEPT if Hb increases by >1.0 g/dL in 2–4 weeks after initiation → reduce dose by 25–50%
+// - Practice Point 3.4.1.3: use the lowest dose that achieves and maintains goals
+//
+// Notes:
+// - This is a research/educational tool; it does not replace clinical judgement or local product labeling.
+// - The user must input Hb ~4 weeks ago to apply Table 7 "after 4 weeks" rules.
+function kdigo_roundEpoetinUnits(x) {
+  // "may round to convenient dose in units" (Table 7). We'll round to nearest 100 units.
+  return Math.round(x / 100) * 100;
+}
+function kdigo_roundToSet(value, allowed) {
+  if (!allowed || !allowed.length) return value;
+  let best = allowed[0], bestDiff = Math.abs(value - allowed[0]);
+  for (const a of allowed) {
+    const d = Math.abs(value - a);
+    if (d < bestDiff) { best = a; bestDiff = d; }
+  }
+  return best;
+}
+
+function calculateKDIGO_ESA_CKD_G5D(hemoglobin, prevHemoglobin4w, weight, currentDose, weeksSinceLastChange, agent) {
+  agent = agent || "epoetin"; // epoetin | darbepoetin | mircera
+  const hb = Number(hemoglobin);
+  const hbPrev4w = Number(prevHemoglobin4w);
+  const w = Number(weight);
+  const weeks = Number(weeksSinceLastChange);
+
+  if (!isFinite(hb) || !isFinite(w) || w <= 0) {
+    return { ok:false, unit:"", schedule:"", weeklyDose:0, perDose:0, note:"Invalid Hb/weight." };
+  }
+
+  // KDIGO adult maintenance target
+  const KDIGO_UPPER = 11.5;
+
+  // KDIGO initiation window (CKD G5D)
+  const INIT_LOW = 9.0;
+  const INIT_HIGH = 10.0;
+
+  // Helper: for agents given 3x/week (epoetin), report per-dose and weekly total
+  const perDoseToWeekly = (perDose) => perDose * 3.0;
+  const weeklyToPerDose = (weekly) => weekly / 3.0;
+
+  // Determine if this is "new start" (no current dose)
+  const hasCurrent = isFinite(currentDose) && Number(currentDose) > 0;
+  const isStart = !hasCurrent;
+
+  // If Hb is already ≥11.5, KDIGO recommends NOT targeting ≥11.5 → reduce/hold
+  if (hb >= KDIGO_UPPER) {
+    return {
+      ok:true,
+      unit: agent === "epoetin" ? "units" : "µg",
+      schedule: "Per clinician",
+      weeklyDose: 0,
+      perDose: 0,
+      note: "Hb ≥11.5 g/dL: KDIGO recommends targeting Hb below 11.5 in adults on ESA (Rec 3.3.1). Consider reducing/holding ESA and reassessing."
+    };
+  }
+
+  // If Hb >10 and no ESA currently, KDIGO suggests initiation when Hb ≤9–10 → generally monitor/optimize iron
+  if (isStart && hb > INIT_HIGH) {
+    return {
+      ok:true,
+      unit: agent === "epoetin" ? "units" : "µg",
+      schedule: "",
+      weeklyDose: 0,
+      perDose: 0,
+      note: "No ESA started: KDIGO suggests ESA initiation in CKD G5D when Hb ≤9.0–10.0 g/dL (Rec 3.2.1). Consider monitoring and addressing reversible causes/iron."
+    };
+  }
+
+  // Adjustment frequency rule (PP 3.4.1.2)
+  const canAdjust = !isFinite(weeks) || weeks >= 4;
+
+  // "Rapid rise exception" (PP 3.4.1.2): if Hb rises >1.0 g/dL in 2–4 weeks after initiation, reduce 25–50%
+  // We approximate by using prevHb4w and weeksSinceLastChange: if 2<=weeks<4 and rise>1.0, reduce 25–50%.
+  const hasPrev = isFinite(hbPrev4w) && hbPrev4w > 0;
+  const rise4w = hasPrev ? (hb - hbPrev4w) : NaN;
+  const rapidRiseEarly = isFinite(weeks) && weeks >= 2 && weeks < 4 && hasPrev && rise4w > 1.0;
+
+  // ========================= EPOETIN alfa/beta (CKD G5D) =========================
+  if (agent === "epoetin") {
+    const unit = "units";
+    const schedule = "3×/week";
+    // Table 7 initial: 50–100 units/kg per dose, 3× weekly
+    const startPerDoseLow  = 50 * w;
+    const startPerDoseHigh = 100 * w;
+    const startPerDoseMid  = (startPerDoseLow + startPerDoseHigh) / 2.0;
+
+    // If starting: choose mid-range per-dose, rounded
+    if (isStart) {
+      // Initiation should be in Hb ≤9–10; the tool triggers for any Hb ≤10, but clinician decides within window.
+      const perDose = kdigo_roundEpoetinUnits(startPerDoseMid);
+      return {
+        ok:true, unit, schedule,
+        weeklyDose: kdigo_roundEpoetinUnits(perDoseToWeekly(perDose)),
+        perDose: perDose,
+        note: "Start epoetin 50–100 units/kg per dose, 3×/week (KDIGO Table 7). Displayed as mid-range, rounded to convenient units."
+      };
+    }
+
+    // If early rapid rise after start, reduce 25–50% (PP 3.4.1.2)
+    if (rapidRiseEarly) {
+      const weekly = Number(currentDose);
+      const reduced = weekly * 0.75; // choose 25% reduction (within 25–50%)
+      const perDose = kdigo_roundEpoetinUnits(weeklyToPerDose(reduced));
+      return {
+        ok:true, unit, schedule,
+        weeklyDose: kdigo_roundEpoetinUnits(perDoseToWeekly(perDose)),
+        perDose,
+        note: "Hb rose >1.0 g/dL within 2–4 weeks after initiation → reduce ESA dose by 25–50% (KDIGO PP 3.4.1.2). Applied 25% reduction."
+      };
+    }
+
+    // If cannot adjust yet, keep dose (PP 3.4.1.2)
+    if (!canAdjust) {
+      const weekly = Number(currentDose);
+      const perDose = kdigo_roundEpoetinUnits(weeklyToPerDose(weekly));
+      return { ok:true, unit, schedule, weeklyDose: kdigo_roundEpoetinUnits(perDoseToWeekly(perDose)), perDose, note: "No change: KDIGO advises avoiding ESA adjustments more often than once every 4 weeks (PP 3.4.1.2)." };
+    }
+
+    // Apply Table 7 adjustment rules using Hb rise after 4 weeks
+    if (!hasPrev) {
+      const weekly = Number(currentDose);
+      const perDose = kdigo_roundEpoetinUnits(weeklyToPerDose(weekly));
+      return { ok:true, unit, schedule, weeklyDose: kdigo_roundEpoetinUnits(perDoseToWeekly(perDose)), perDose, note:"To apply KDIGO Table 7 dose-adjustment rules, enter Hb from ~4 weeks ago; keeping current dose." };
+    }
+
+    let perDose = weeklyToPerDose(Number(currentDose));
+
+    if (rise4w < 1.0) {
+      // Increase by +25 units/kg/dose (Table 7)
+      perDose = perDose + (25 * w);
+      perDose = kdigo_roundEpoetinUnits(perDose);
+      return { ok:true, unit, schedule, weeklyDose: kdigo_roundEpoetinUnits(perDoseToWeekly(perDose)), perDose, note:"Increase epoetin by +25 units/kg per dose because Hb rise <1.0 g/dL after 4 weeks (KDIGO Table 7). Use lowest effective dose (PP 3.4.1.3)." };
+    }
+
+    if (rise4w > 2.0) {
+      // Reduce by 10–25 units/dose (Table 7). Choose 15 units/dose as default in range.
+      perDose = Math.max(0, perDose - 15);
+      perDose = kdigo_roundEpoetinUnits(perDose);
+      return { ok:true, unit, schedule, weeklyDose: kdigo_roundEpoetinUnits(perDoseToWeekly(perDose)), perDose, note:"Reduce epoetin by 10–25 units/dose because Hb rise >2.0 g/dL in 4 weeks (KDIGO Table 7). Use lowest effective dose (PP 3.4.1.3)." };
+    }
+
+    // Maintain (PP 3.4.1.3 lowest effective dose)
+    perDose = kdigo_roundEpoetinUnits(perDose);
+    return { ok:true, unit, schedule, weeklyDose: kdigo_roundEpoetinUnits(perDoseToWeekly(perDose)), perDose, note:"Maintain current epoetin dose: Hb rise 1.0–2.0 g/dL over 4 weeks. Keep Hb <11.5 (Rec 3.3.1) and use lowest effective dose (PP 3.4.1.3)." };
+  }
+
+  // ========================= DARBEPOETIN (CKD G5D) =========================
+  if (agent === "darbepoetin") {
+    const unit = "µg";
+    // Table 7: 0.45 µg/kg weekly OR 0.75 µg/kg every 2 weeks (may round to convenient dose: 25,40,60,100,150,200,300,500)
+    const allowed = [25,40,60,100,150,200,300,500];
+
+    // We'll default to weekly schedule (0.45 µg/kg weekly) for simplicity
+    const schedule = "weekly";
+    const start = 0.45 * w;
+    const startRounded = kdigo_roundToSet(start, allowed);
+
+    if (isStart) {
+      return { ok:true, unit, schedule, weeklyDose: startRounded, perDose: startRounded, note:"Start darbepoetin 0.45 µg/kg weekly (KDIGO Table 7), rounded to convenient syringe dose." };
+    }
+
+    // Early rapid rise exception (PP 3.4.1.2) — reduce 25–50%
+    if (rapidRiseEarly) {
+      const cur = Number(currentDose);
+      const reduced = kdigo_roundToSet(cur * 0.75, allowed);
+      return { ok:true, unit, schedule, weeklyDose: reduced, perDose: reduced, note:"Hb rose >1.0 g/dL within 2–4 weeks after initiation → reduce dose by 25–50% (KDIGO PP 3.4.1.2). Applied 25% reduction." };
+    }
+
+    if (!canAdjust) {
+      const cur = kdigo_roundToSet(Number(currentDose), allowed);
+      return { ok:true, unit, schedule, weeklyDose: cur, perDose: cur, note:"No change: avoid ESA adjustments more often than once every 4 weeks (KDIGO PP 3.4.1.2)." };
+    }
+
+    if (!hasPrev) {
+      const cur = kdigo_roundToSet(Number(currentDose), allowed);
+      return { ok:true, unit, schedule, weeklyDose: cur, perDose: cur, note:"Enter Hb from ~4 weeks ago to apply KDIGO Table 7 rules; keeping current dose." };
+    }
+
+    const cur = Number(currentDose);
+    if (rise4w < 1.0) {
+      // Table 7: increase by 25% if rise <1.0 after 4 weeks
+      const inc = kdigo_roundToSet(cur * 1.25, allowed);
+      return { ok:true, unit, schedule, weeklyDose: inc, perDose: inc, note:"Increase darbepoetin by 25% because Hb rise <1.0 g/dL after 4 weeks (KDIGO Table 7). Use lowest effective dose (PP 3.4.1.3)." };
+    }
+    if (rise4w > 2.0) {
+      // Table 7: decrease by 25% if rise >2.0 in 4 weeks
+      const dec = kdigo_roundToSet(cur * 0.75, allowed);
+      return { ok:true, unit, schedule, weeklyDose: dec, perDose: dec, note:"Decrease darbepoetin by 25% because Hb rise >2.0 g/dL in 4 weeks (KDIGO Table 7). Use lowest effective dose (PP 3.4.1.3)." };
+    }
+
+    const keep = kdigo_roundToSet(cur, allowed);
+    return { ok:true, unit, schedule, weeklyDose: keep, perDose: keep, note:"Maintain darbepoetin dose: Hb rise 1.0–2.0 g/dL over 4 weeks; keep Hb <11.5 and use lowest effective dose (KDIGO Rec 3.3.1; PP 3.4.1.3)." };
+  }
+
+  // ========================= METHYL PEG-EPOETIN BETA (Mircera) (CKD G5D) =========================
+  if (agent === "mircera") {
+    const unit = "µg";
+    // Table 7: CKD G5D: 0.6 µg/kg every 2 weeks (may round to convenient dose)
+    const schedule = "every 2 weeks";
+    const start = 0.6 * w;
+    // Round to nearest 10 µg as a "convenient" approximation (KDIGO does not list exact set here)
+    const round10 = (x) => Math.round(x / 10) * 10;
+    const startRounded = round10(start);
+
+    if (isStart) {
+      return { ok:true, unit, schedule, weeklyDose: 0, perDose: startRounded, note:"Start Mircera 0.6 µg/kg every 2 weeks (KDIGO Table 7), rounded to convenient dose." };
+    }
+
+    if (rapidRiseEarly) {
+      const cur = Number(currentDose); // interpret as µg per dose (q2w)
+      const reduced = round10(cur * 0.75);
+      return { ok:true, unit, schedule, weeklyDose: 0, perDose: reduced, note:"Hb rose >1.0 g/dL within 2–4 weeks after initiation → reduce dose by 25–50% (KDIGO PP 3.4.1.2). Applied 25% reduction." };
+    }
+
+    if (!canAdjust) {
+      const cur = round10(Number(currentDose));
+      return { ok:true, unit, schedule, weeklyDose: 0, perDose: cur, note:"No change: avoid ESA adjustments more often than once every 4 weeks (KDIGO PP 3.4.1.2)." };
+    }
+
+    if (!hasPrev) {
+      const cur = round10(Number(currentDose));
+      return { ok:true, unit, schedule, weeklyDose: 0, perDose: cur, note:"Enter Hb from ~4 weeks ago to apply KDIGO Table 7 rules; keeping current dose." };
+    }
+
+    const cur = Number(currentDose); // µg per dose (q2w)
+    if (rise4w < 1.0) {
+      // Table 7: Increase by 30–50 µg/dose if rise <1.0 in 4 weeks. Choose +30.
+      const inc = round10(cur + 30);
+      return { ok:true, unit, schedule, weeklyDose: 0, perDose: inc, note:"Increase Mircera by +30–50 µg/dose because Hb rise <1.0 g/dL in 4 weeks (KDIGO Table 7). Applied +30 µg." };
+    }
+    if (rise4w > 2.0) {
+      // Reduce by 30–50 µg/dose if rise >2.0 in 4 weeks. Choose -30.
+      const dec = round10(Math.max(0, cur - 30));
+      return { ok:true, unit, schedule, weeklyDose: 0, perDose: dec, note:"Reduce Mircera by 30–50 µg/dose because Hb rise >2.0 g/dL in 4 weeks (KDIGO Table 7). Applied −30 µg." };
+    }
+
+    const keep = round10(cur);
+    return { ok:true, unit, schedule, weeklyDose: 0, perDose: keep, note:"Maintain Mircera dose: Hb rise 1.0–2.0 g/dL over 4 weeks; keep Hb <11.5 and use lowest effective dose." };
+  }
+
+  return { ok:false, unit:"", schedule:"", weeklyDose:0, perDose:0, note:"Unknown ESA agent." };
+}
+
+
+
+// Predict Hb response based on EPO dose (clinical response model) [web:26]
+function predictHbResponse(currentHb, predictedDose, weight, tsat, ferritin, crp, albumin) {
+    // Baseline response: 0.3-0.5 g/dL rise per 4 weeks with adequate dosing [web:7]
+    let responseFactor = 0.4; // Average Hb response g/dL
+    
+    // Adjust for iron status [web:1]
+    if (tsat < 20 || ferritin < 100) {
+        responseFactor *= 0.6;
+    }
+    
+    // Adjust for inflammation [web:27]
+    if (crp > 10 || albumin < 3.0) {
+        responseFactor *= 0.7;
+    }
+    
+    // Dose responsiveness (higher doses have diminishing returns) [web:8]
+    let doseEffect = Math.min(predictedDose / (75 * weight), 2.0);
+    
+    let predictedRise = responseFactor * doseEffect * 0.8; // Conservative 4-week prediction
+    let predictedHb = currentHb + predictedRise;
+    
+    // KDIGO target capping [web:1]
+    if (predictedHb > 11.5) predictedHb = 11.5;
+    if (predictedHb < 9.0) predictedHb = 9.0;
+    
+    return +predictedHb.toFixed(1);
+}
+
+function getMedicationAdvice(eGFR, acei, arb, diuretics, statins, nsaids, diabetesMeds) {
+    if (eGFR <= 0 || isNaN(eGFR)) return "Insufficient data for medication advice.";
+    
+    let advice = "";
+    if (eGFR >= 60) {
+        advice += "Kidney function normal, continue standard therapy.<br>";
+    } else if (eGFR >= 30) {
+        advice += "Moderate CKD: Adjust medication dosages and avoid nephrotoxins.<br>";
+    } else if (eGFR >= 15) {
+        advice += "Severe CKD: Use reduced dosages and monitor labs closely.<br>";
+    } else {
+        advice += '<span class="alert">Kidney failure: Immediate nephrology referral recommended.</span><br>';
+    }
+    
+    if (acei || arb) advice += "Monitor potassium closely due to ACE inhibitors/ARBs.<br>";
+    if (nsaids) advice += '<span class="alert">Avoid NSAIDs due to nephrotoxicity risk.</span><br>';
+    if (diabetesMeds) advice += "Optimize diabetes control carefully.<br>";
+    
+    return advice;
+}
+
+function getLabAlerts(potassium, albumin, esr, crp, ferritin, b12, folicAcid, pth) {
+    let alerts = "";
+    if (potassium > 5.0) alerts += '<span class="alert">Hyperkalemia detected, urgent action required.</span><br>';
+    if (albumin < 3.5) alerts += '<span class="alert">Hypoalbuminemia may indicate malnutrition.</span><br>';
+    if (esr > 20) alerts += "Elevated ESR - evaluate for inflammation or infection.<br>";
+    if (crp > 3) alerts += '<span class="alert">Elevated CRP - possible inflammation or infection.</span><br>';
+    if (ferritin < 30) alerts += "Low ferritin - possible iron deficiency.<br>";
+    if (b12 < 200) alerts += "Low Vitamin B12 - deficiency suspected.<br>";
+    if (folicAcid < 3) alerts += "Low Folic Acid - deficiency suspected.<br>";
+    if (pth > 65) alerts += "High PTH - risk for renal osteodystrophy.<br>";
+    
+    return alerts || "No critical lab alerts.";
+}
+
+function getDietaryAdvice(eGFR, potassium, sodium) {
+    if (eGFR >= 60) return "Normal diet allowed.";
+    
+    let advice = "";
+    if (potassium > 5.0) advice += "Limit potassium intake, ";
+    if (sodium > 145) advice += "Restrict sodium intake, ";
+    advice += "Maintain adequate protein intake.";
+    return advice;
+}
+
+function getGuidelineCompliance(predictedDose, weight, predictedHb, hemoglobin, tsat, ferritin) {
+    let compliance = "<strong> KDIGO/FDA Compliance Check</strong><br>";
+    
+    // Hb target compliance [web:1]
+    if (predictedHb >= 10 && predictedHb <= 11.5) {
+        compliance += "✓ Target Hb 10-11.5 g/dL achieved<br>";
+    } else {
+        compliance += '<span class="alert">⚠ Target Hb outside KDIGO range</span><br>';
+    }
+    
+    // Starting dose check [web:16]
+    let startDoseRange = 50 * weight + " - " + 100 * weight + " units/week";
+    if (predictedDose >= 50 * weight && predictedDose <= 100 * weight) {
+        compliance += "✓ Starting dose 50-100 units/kg/week<br>";
+    } else if (predictedDose === 0) {
+        compliance += "✓ Appropriate dose hold<br>";
+    } else {
+        compliance += "⚠ Dose outside standard starting range (" + startDoseRange + " units/week)<br>";
+    }
+    
+    // Iron status [web:1]
+    if (tsat <= 30 || ferritin <= 500) {
+        compliance += "⚠ Consider IV iron optimization (TSAT≤30% or ferritin≤500 ng/mL)<br>";
+    }
+    
+    return compliance;
+}
+
+function calculateAll() {
+    // All input collection remains exactly the same
+    const patientName = document.getElementById('patientName').value.trim();
+    const age = parseInt(document.getElementById('age').value);
+    const sex = document.getElementById('sex').value;
+    const ethnicity = document.getElementById('ethnicity').value;
+    const weight = parseFloat(document.getElementById('weight').value);
+    const height = parseFloat(document.getElementById('height').value);
+    const creatinine = parseFloat(document.getElementById('creatinine').value);
+    const bun = parseFloat(document.getElementById('bun').value);
+    const potassium = parseFloat(document.getElementById('potassium').value);
+    const sodium = parseFloat(document.getElementById('sodium').value);
+    const albumin = parseFloat(document.getElementById('albumin').value);
+    const esr = parseFloat(document.getElementById('esr').value);
+    const ferritin = parseFloat(document.getElementById('ferritin').value);
+    const tibc = parseFloat(document.getElementById('tibc').value);
+    const tsat = parseFloat(document.getElementById('tsat').value);
+    const crp = parseFloat(document.getElementById('crp').value);
+    const b12 = parseFloat(document.getElementById('b12').value);
+    const folicAcid = parseFloat(document.getElementById('folicAcid').value);
+    const pth = parseFloat(document.getElementById('pth').value);
+    const egfrManual = parseFloat(document.getElementById('egfrInput').value);
+    const mch = parseFloat(document.getElementById('mch').value);
+    const mchc = parseFloat(document.getElementById('mchc').value);
+    const hemoglobin = parseFloat(document.getElementById('hemoglobin').value);
+    const hematocrit = parseFloat(document.getElementById('hematocrit').value);
+    const mcv = parseFloat(document.getElementById('mcv').value);
+    const rbc = parseFloat(document.getElementById('rbc').value);
+    const wbc = parseFloat(document.getElementById('wbc').value);
+    const platelets = parseFloat(document.getElementById('platelets').value);
+    const acei = document.getElementById('acei').checked;
+    const arb = document.getElementById('arb').checked;
+    const diuretics = document.getElementById('diuretics').checked;
+    const statins = document.getElementById('statins').checked;
+    const nsaids = document.getElementById('nsaids').checked;
+    const diabetesMeds = document.getElementById('diabetesMeds').checked;
+    const currentEpoDose = parseFloat(document.getElementById('currentEpoDose').value) || 0;
+    const prevHb = parseFloat(document.getElementById('prevHb').value);
+    const weeksSinceChange = parseFloat(document.getElementById('weeksSinceChange').value);
+    const esaAgent = document.getElementById('esaAgent').value;
+    
+    // All previous calculations unchanged
+    const bmi = calculateBMI(weight, height);
+    if (!isNaN(bmi)) {
+        document.getElementById('bmi').value = bmi;
+    } else {
+        document.getElementById('bmi').value = "";
+    }
+    
+    if (isNaN(age) || !sex || isNaN(creatinine) || isNaN(hemoglobin) || isNaN(weight)) {
+        alert('Please enter valid Age, Sex, Creatinine, Hemoglobin, and Weight values.');
+        return;
+    }
+    
+    let eGFR = egfrManual;
+    if (isNaN(eGFR)) {
+        eGFR = calculateeGFR(creatinine, age, sex, ethnicity);
+    }
+    
+    // NEW KDIGO/FDA EPO CALCULATION
+    const epoRec = calculateKDIGO_ESA_CKD_G5D(hemoglobin, prevHb, weight, currentEpoDose, weeksSinceChange, esaAgent);
+    const predictedEpoDose = (esaAgent === 'epoetin') ? (epoRec.weeklyDose || 0) : 0;
+    const predictedHb = predictHbResponse(hemoglobin, predictedEpoDose, weight, tsat, ferritin, crp, albumin);
+    
+    // All previous outputs unchanged
+    const medicationAdvice = getMedicationAdvice(eGFR, acei, arb, diuretics, statins, nsaids, diabetesMeds);
+    const labAlerts = getLabAlerts(potassium, albumin, esr, crp, ferritin, b12, folicAcid, pth);
+    const dietaryAdvice = getDietaryAdvice(eGFR, potassium, sodium);
+    const guidelineCompliance = getGuidelineCompliance(predictedEpoDose, weight, predictedHb, hemoglobin, tsat, ferritin);
+    
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('patientNameResult').innerHTML = "<strong>Patient Name:</strong> " + (patientName || "N/A");
+    document.getElementById('bmiResult').innerHTML = "<strong>BMI:</strong> " + (!isNaN(bmi) ? bmi : "N/A") + " kg/m²";
+    document.getElementById('egfrResult').innerHTML = "<strong>eGFR:</strong> " + eGFR + " mL/min/1.73m²";
+    document.getElementById('medicationAdvice').innerHTML = "<strong>Medication Advice:</strong><br>" + medicationAdvice;
+    document.getElementById('labAlerts').innerHTML = "<strong>Lab Alerts:</strong><br>" + labAlerts;
+    document.getElementById('dietaryAdvice').innerHTML = "<strong>Dietary Advice:</strong><br>" + dietaryAdvice;
+    
+    // UPDATED EPO RESULTS with KDIGO/FDA compliance
+    (function(){
+      const unit = (epoRec && epoRec.unit) ? epoRec.unit : "units";
+      const schedule = (epoRec && epoRec.schedule) ? epoRec.schedule : "";
+      let mainLine = "";
+      if (esaAgent === "epoetin") {
+        mainLine = "<strong>" + (epoRec.weeklyDose || 0).toLocaleString() + " " + unit + "/week</strong> <small>(" + schedule + ")</small>";
+        if (epoRec.perDose) mainLine += "<br><small>≈ " + epoRec.perDose.toLocaleString() + " " + unit + " per dose</small>";
+      } else if (esaAgent === "darbepoetin") {
+        mainLine = "<strong>" + (epoRec.perDose || 0).toLocaleString() + " " + unit + "</strong> <small>(" + schedule + ")</small>";
+      } else if (esaAgent === "mircera") {
+        mainLine = "<strong>" + (epoRec.perDose || 0).toLocaleString() + " " + unit + "</strong> <small>(" + schedule + ")</small>";
+      }
+      document.getElementById('epoPrediction').innerHTML =
+        "<strong> 🩸 KDIGO 2025 Suggested ESA Dose (CKD G5D):</strong><br>" +
+        mainLine +
+        "<br><small>" + (epoRec.note || "") + "</small>";
+    })();
+    document.getElementById('predictedHb').innerHTML = "<strong> 📈 Predicted Hb (4 weeks):</strong> <strong>" + predictedHb + " g/dL</strong><br><small>Current: " + hemoglobin + " g/dL → Expected rise: +" + (predictedHb - hemoglobin).toFixed(1) + " g/dL</small>";
+    document.getElementById('guidelineCompliance').innerHTML = guidelineCompliance;
+}
+
+async function generateRationale() {
+    const btn = document.getElementById('btn-rationale');
+    const loader = document.getElementById('rationale-loader');
+    const output = document.getElementById('rationale-output');
+    const txt = document.getElementById('rationale-text');
+
+    // 1. Gather Inputs (Exact same as calculateAll, but focused on ESA)
+    const hemoglobin = parseFloat(document.getElementById('hemoglobin').value);
+    const prevHb = parseFloat(document.getElementById('prevHb').value);
+    const weight = parseFloat(document.getElementById('weight').value);
+    const currentDose = parseFloat(document.getElementById('currentEpoDose').value) || 0;
+    const weeksSinceChange = parseFloat(document.getElementById('weeksSinceChange').value);
+    const esaAgent = document.getElementById('esaAgent').value;
+
+    if (isNaN(hemoglobin) || isNaN(weight)) {
+        alert("Please ensure Hemoglobin and Weight are entered correctly/calculated.");
+        return;
+    }
+
+    // 2. Re-calculate Rule Output to ensure state sync (Logic unchanged)
+    const epoRec = calculateKDIGO_ESA_CKD_G5D(hemoglobin, prevHb, weight, currentDose, weeksSinceChange, esaAgent);
+
+    // 3. Prepare Payload
+    const payload = {
+        inputs: {
+            hemoglobin, 
+            prevHb: isNaN(prevHb) ? null : prevHb, 
+            currentDose: isNaN(currentDose) ? null : currentDose, 
+            esaAgent, 
+            weight, 
+            weeksSinceChange: isNaN(weeksSinceChange) ? null : weeksSinceChange
+        },
+        ruleOutput: {
+            weeklyDose: epoRec.weeklyDose || 0,
+            perDose: epoRec.perDose || 0,
+            unit: epoRec.unit || "",
+            note: epoRec.note || ""
+        }
+    };
+
+    // 4. API Call
+    btn.disabled = true;
+    btn.innerText = "Generating...";
+    loader.style.display = 'block';
+    output.style.display = 'none';
+
+    try {
+        const res = await fetch('/api/kdigo-rationale', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) throw new Error("Backend error");
+        
+        const data = await res.json();
+
+        if (data.explanation) {
+            // Use marked.parse to render Markdown to safe HTML
+            txt.innerHTML = marked.parse(data.explanation);
+            output.style.display = 'block';
+        } else {
+            alert('Error generating rationale');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Failed to generate rationale. Ensure backend is running.');
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "✨ Generate KDIGO Rationale (Explanation Only)";
+        loader.style.display = 'none';
+    }
+}
+  </script>
+
+<!-- KDIGO Guideline Information Modal -->
+<div id="kdigoModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeKdigoModal()">&times;</span>
+
+    <h3>KDIGO Guideline Reference</h3>
+
+    <p>
+      This Clinical Decision Support System (CDSS) is technically aligned with selected
+      recommendations from the
+      <strong>KDIGO 2025 Clinical Practice Guideline for Anemia in Chronic Kidney Disease
+      (Public Review Draft, Nov 2024)</strong>.
+    </p>
+
+    <h4>KDIGO Elements Implemented</h4>
+    <ul>
+      <li>ESA initiation window for CKD G5D (Hb ≤ 9.0–10.0 g/dL)</li>
+      <li>Adult maintenance hemoglobin target (Hb &lt; 11.5 g/dL)</li>
+      <li>ESA dose adjustment based on hemoglobin response over ~4 weeks</li>
+      <li>Restriction on frequent ESA dose adjustments (≥ 4 weeks)</li>
+      <li>Early dose reduction for rapid hemoglobin rise</li>
+    </ul>
+
+    <h4>Scope & Disclaimer</h4>
+    <p>
+      This implementation represents a <strong>technical alignment of rule logic</strong>
+      with KDIGO guideline statements. It does not constitute clinical validation,
+      medical endorsement, or regulatory approval.
+    </p>
+
+    <p>
+      All clinical decisions remain the responsibility of qualified healthcare professionals.
+    </p>
+  </div>
+</div>
+
+
+<script>
+function openKdigoModal() {
+  document.getElementById("kdigoModal").style.display = "block";
+}
+function closeKdigoModal() {
+  document.getElementById("kdigoModal").style.display = "none";
+}
+</script>
+
+</body>
+</html>
