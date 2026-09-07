@@ -15,7 +15,12 @@ app.use(cors());
 const sqlite3 = require('sqlite3').verbose();
 // Use a file-based DB. In Railway, this resets on deploy unless a Volume is mounted, 
 // but it persists across restarts if not redeployed. Good for school project/demos.
-const db = new sqlite3.Database('./kdigo_history.db', (err) => {
+// On Vercel the filesystem is read-only except for /tmp, so the DB lives there.
+// Note: /tmp is ephemeral and per-instance, so history does not persist across
+// cold starts or instances -- matching this app's existing "resets on deploy"
+// behaviour (no Volume was ever mounted). Set DB_PATH to override.
+const DB_PATH = process.env.DB_PATH || (process.env.VERCEL ? '/tmp/kdigo_history.db' : './kdigo_history.db');
+const db = new sqlite3.Database(DB_PATH, (err) => {
   if (err) console.error('Could not connect to database', err);
   else console.log('Connected to SQLite database');
 });
@@ -170,7 +175,13 @@ app.get('/api/history', (req, res) => {
   });
 });
 
+// @vercel/node uses the exported Express app as the request handler and does
+// not run a listening server, so only listen when this file is run directly.
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
